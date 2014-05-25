@@ -1,3 +1,9 @@
+trac-announcer (1.0+svn13939-1~aroth~ppa1) trusty; urgency=medium
+
+  * rebuild for active distro
+
+ -- Andreas Roth <aroth@arsoft-online.com>  Sun, 25 May 2014 17:55:56 +0200
+
 trac-announcer (1.0+svn12491-1~aroth~ppa2~quantal1) quantal; urgency=low
 
   * switch to dh_python2
