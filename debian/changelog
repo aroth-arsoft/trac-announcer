@@ -1,0 +1,24 @@
+trac-announcer (1.0+svn12491-1~aroth~ppa2~quantal1) quantal; urgency=low
+
+  * switch to dh_python2
+
+ -- Andreas Roth <aroth@arsoft-online.com>  Sun, 30 Dec 2012 09:28:59 +0100
+
+trac-announcer (1.0+svn12491-1~aroth~ppa1) quantal; urgency=low
+
+  * new upstream release 1.0
+
+ -- Andreas Roth <aroth@arsoft-online.com>  Sat, 29 Dec 2012 18:08:26 +0100
+
+trac-announcer (0.12.1+svn11133-2~aroth~ppa2) precise; urgency=low
+
+  * removed quotes around email to: field to avoid trouble on mail server with
+  address rewrite
+
+ -- Andreas Roth <aroth@arsoft-online.com>  Fri, 28 Sep 2012 17:10:21 +0200
+
+trac-announcer (0.12.1+svn11133-1~aroth~ppa1) oneiric; urgency=low
+
+  * initial release
+
+ -- Andreas Roth <aroth@arsoft-online.com>  Thu, 12 Jan 2012 07:03:31 +0100
