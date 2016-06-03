@@ -1,0 +1,11 @@
+--- a/setup.cfg
++++ b/setup.cfg
+@@ -1,6 +1,6 @@
+ [egg_info]
+-tag_build = dev
+-tag_svn_revision = true
++tag_build = +svn15572
++tag_svn_revision = false
+ 
+ [extract_messages]
+ add_comments = TRANSLATOR:

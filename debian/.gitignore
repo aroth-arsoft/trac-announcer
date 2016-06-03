@@ -1,0 +1,7 @@
+*.debhelper
+*.substvars
+*.log
+/debhelper-build-stamp
+/files
+/python-module-stampdir/
+/trac-announcer/
