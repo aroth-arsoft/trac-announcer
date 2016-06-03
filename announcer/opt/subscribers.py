@@ -415,8 +415,7 @@ class TicketCustomFieldSubscriber(Component):
 
                 # Default subscription
                 for s in self.default_subscriptions():
-                    yield (s[0], s[1], sid, auth, addr, None,
-                            s[3], s[4])
+                    yield (s[0], s[1], sid, auth, addr, None, s[2], s[3])
                 if sid:
                     sids.add((sid,auth))
 
@@ -660,6 +659,12 @@ class WatchSubscriber(Component):
 
     def wiki_page_version_deleted(*args):
         pass
+
+    def wiki_page_renamed(self, page, old_name):
+        class_ = self.__class__.__name__
+        target = get_target_id(page)
+        SubscriptionAttribute.change_target(self.env, class_, 'wiki',
+                                            old_name, target)
 
     # IAnnouncementSubscriber methods
 
