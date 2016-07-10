@@ -4,7 +4,7 @@
  [egg_info]
 -tag_build = dev
 -tag_svn_revision = true
-+tag_build = +svn15572
++tag_build =
 +tag_svn_revision = false
  
  [extract_messages]

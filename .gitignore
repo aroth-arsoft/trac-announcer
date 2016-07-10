@@ -1,0 +1,4 @@
+/.pybuild/
+/TracAnnouncer.egg-info/
+*.pyc
+*.mo

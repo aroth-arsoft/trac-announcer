@@ -1,3 +1,9 @@
+trac-announcer (1.0+svn15572-2~aroth2) xenial; urgency=medium
+
+  * fixed missing SOURCES.txt
+
+ -- Andreas Roth <aroth@arsoft-online.com>  Sun, 10 Jul 2016 08:41:55 +0200
+
 trac-announcer (1.0+svn15572-2~aroth1) xenial; urgency=medium
 
   * drop cdbs and use debhelper only
