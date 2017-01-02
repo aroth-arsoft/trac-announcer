@@ -8,6 +8,6 @@
 #
 
 import pkg_resources
-pkg_resources.require('Trac >= 1.0')
+pkg_resources.require('Trac >= 1.2')
 
-__version__ = __import__('pkg_resources').get_distribution('TracAnnouncer').version
+__version__ = pkg_resources.get_distribution('TracAnnouncer').version
