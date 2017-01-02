@@ -1,3 +1,9 @@
+trac-announcer (1.0+svn16171-1~aroth1) yakkety; urgency=medium
+
+  * new upstream version 1.0, svn 16171
+
+ -- Andreas Roth <aroth@arsoft-online.com>  Mon, 02 Jan 2017 15:23:08 +0100
+
 trac-announcer (1.0+svn15572-2~aroth3) xenial; urgency=medium
 
   * disable tests

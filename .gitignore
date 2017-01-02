@@ -2,3 +2,4 @@
 /TracAnnouncer.egg-info/
 *.pyc
 *.mo
+/.pc/
