@@ -202,7 +202,7 @@
 -        db = self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
-+        with env.db_query as db:
++        with self.env.db_query as db:
 +            cursor = db.cursor()
 +            cursor.execute("""
              SELECT value
@@ -248,7 +248,7 @@
 -        else:
 -            pair = (self.default['dists'], self.default['value'])
 -            authenticated = False
-+        with env.db_query as db:
++        with self.env.db_query as db:
 +            cursor = db.cursor()
 +            cursor.execute("""
 +                SELECT value, authenticated
@@ -273,7 +273,7 @@
 -        db = self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
-+        with env.db_query as db:
++        with self.env.db_query as db:
 +            cursor = db.cursor()
 +            cursor.execute("""
              SELECT sid, authenticated, value
@@ -305,7 +305,7 @@
 -        db = self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
-+        with env.db_query as db:
++        with self.env.db_query as db:
 +            cursor = db.cursor()
 +            cursor.execute("""
              SELECT value, authenticated
@@ -353,7 +353,7 @@
 -        db = self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
-+        with env.db_query as db:
++        with self.env.db_query as db:
 +            cursor = db.cursor()
 +            cursor.execute("""
              SELECT sid, authenticated, value
