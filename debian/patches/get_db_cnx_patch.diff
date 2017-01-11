@@ -10,7 +10,7 @@
  
      def environment_needs_upgrade(self, db):
          schema_ver = self.get_schema_version(db)
-@@ -427,17 +428,17 @@
+@@ -427,43 +428,44 @@
  
      def get_schema_version(self, db=None):
          """Return the current schema version for this plugin."""
@@ -26,17 +26,71 @@
 -        """)
 -        row = cursor.fetchone()
 -        if not (row and int(row[0]) > 5):
+-            # Care for pre-announcer-1.0 installations.
+-            dburi = self.config.get('trac', 'database')
+-            tables = self._get_tables(dburi, cursor)
+-            if 'subscription' in tables:
+-                # Version > 2
+-                cursor.execute("SELECT * FROM subscription_attribute")
+-                columns = [col[0] for col in cursor.cursor.description]
+-                if 'authenticated' in columns:
+-                    self.log.debug("TracAnnouncer needs to register schema "
+-                                   "version")
+-                    return 5
+-                if 'realm' in columns:
+-                    self.log.debug("TracAnnouncer needs to change a table")
+-                    return 4
+-                self.log.debug("TracAnnouncer needs to change tables")
+-                return 3
+-            if 'subscriptions' in tables:
+-                cursor.execute("SELECT * FROM subscriptions")
+-                columns = [col[0] for col in cursor.cursor.description]
+-                if 'format' not in columns:
+-                    self.log.debug("TracAnnouncer needs to add new tables")
+-                    return 2
+-                self.log.debug("TracAnnouncer needs to add/change tables")
+-                return 1
+-            # This is a new installation.
+-            return 0
+-        # The expected outcome for any up-to-date installation.
+-        return row and int(row[0]) or 0
 +            FROM system
 +            WHERE name='announcer_version'
 +            """)
 +            row = cursor.fetchone()
 +            if not (row and int(row[0]) > 5):
-             # Care for pre-announcer-1.0 installations.
--            dburi = self.config.get('trac', 'database')
++                # Care for pre-announcer-1.0 installations.
 +                dburi = self.config.get('trac', 'database')
-             tables = self._get_tables(dburi, cursor)
-             if 'subscription' in tables:
-                 # Version > 2
++                tables = self._get_tables(dburi, cursor)
++                if 'subscription' in tables:
++                    # Version > 2
++                    cursor.execute("SELECT * FROM subscription_attribute")
++                    columns = [col[0] for col in cursor.cursor.description]
++                    if 'authenticated' in columns:
++                        self.log.debug("TracAnnouncer needs to register schema "
++                                    "version")
++                        return 5
++                    if 'realm' in columns:
++                        self.log.debug("TracAnnouncer needs to change a table")
++                        return 4
++                    self.log.debug("TracAnnouncer needs to change tables")
++                    return 3
++                if 'subscriptions' in tables:
++                    cursor.execute("SELECT * FROM subscriptions")
++                    columns = [col[0] for col in cursor.cursor.description]
++                    if 'format' not in columns:
++                        self.log.debug("TracAnnouncer needs to add new tables")
++                        return 2
++                    self.log.debug("TracAnnouncer needs to add/change tables")
++                    return 1
++                # This is a new installation.
++                return 0
++            # The expected outcome for any up-to-date installation.
++            return row and int(row[0]) or 0
++        return 0
+ 
+     @staticmethod
+     def _get_tables(dburi, cursor):
 --- a/announcer/opt/tests/subscribers.py
 +++ b/announcer/opt/tests/subscribers.py
 @@ -31,8 +31,8 @@
