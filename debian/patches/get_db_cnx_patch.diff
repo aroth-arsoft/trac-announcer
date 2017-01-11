@@ -5,92 +5,63 @@
  
      def environment_created(self):
 -        self._upgrade_db(self.env.get_db_cnx())
-+	with self.env.db_transaction as db:
-+	    self._upgrade_db(db)
++        with self.env.db_transaction as db:
++            self._upgrade_db(db)
  
      def environment_needs_upgrade(self, db):
          schema_ver = self.get_schema_version(db)
-@@ -427,43 +428,43 @@
+@@ -427,15 +428,15 @@
  
      def get_schema_version(self, db=None):
          """Return the current schema version for this plugin."""
 -        db = db and db or self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
--            SELECT value
++        with self.env.db_query as db:
++            cursor = db.cursor()
++            cursor.execute("""
+             SELECT value
 -              FROM system
 -             WHERE name='announcer_version'
 -        """)
 -        row = cursor.fetchone()
 -        if not (row and int(row[0]) > 5):
--            # Care for pre-announcer-1.0 installations.
--            dburi = self.config.get('trac', 'database')
--            tables = self._get_tables(dburi, cursor)
--            if 'subscription' in tables:
--                # Version > 2
--                cursor.execute("SELECT * FROM subscription_attribute")
--                columns = [col[0] for col in cursor.cursor.description]
--                if 'authenticated' in columns:
++            FROM system
++            WHERE name='announcer_version'
++            """)
++            row = cursor.fetchone()
++            if not (row and int(row[0]) > 5):
+             # Care for pre-announcer-1.0 installations.
+             dburi = self.config.get('trac', 'database')
+             tables = self._get_tables(dburi, cursor)
+@@ -444,20 +445,20 @@
+                 cursor.execute("SELECT * FROM subscription_attribute")
+                 columns = [col[0] for col in cursor.cursor.description]
+                 if 'authenticated' in columns:
 -                    self.log.debug("TracAnnouncer needs to register schema "
 -                                   "version")
 -                    return 5
--                if 'realm' in columns:
++                self.log.debug("TracAnnouncer needs to register schema "
++                        "version")
++                return 5
+                 if 'realm' in columns:
 -                    self.log.debug("TracAnnouncer needs to change a table")
 -                    return 4
--                self.log.debug("TracAnnouncer needs to change tables")
--                return 3
--            if 'subscriptions' in tables:
--                cursor.execute("SELECT * FROM subscriptions")
--                columns = [col[0] for col in cursor.cursor.description]
--                if 'format' not in columns:
++                self.log.debug("TracAnnouncer needs to change a table")
++                return 4
+                 self.log.debug("TracAnnouncer needs to change tables")
+                 return 3
+             if 'subscriptions' in tables:
+                 cursor.execute("SELECT * FROM subscriptions")
+                 columns = [col[0] for col in cursor.cursor.description]
+                 if 'format' not in columns:
 -                    self.log.debug("TracAnnouncer needs to add new tables")
 -                    return 2
--                self.log.debug("TracAnnouncer needs to add/change tables")
--                return 1
--            # This is a new installation.
--            return 0
--        # The expected outcome for any up-to-date installation.
--        return row and int(row[0]) or 0
-+	with self.env.db_query as db:
-+	    cursor = db.cursor()
-+	    cursor.execute("""
-+		SELECT value
-+		  FROM system
-+		 WHERE name='announcer_version'
-+	    """)
-+	    row = cursor.fetchone()
-+	    if not (row and int(row[0]) > 5):
-+		# Care for pre-announcer-1.0 installations.
-+		dburi = self.config.get('trac', 'database')
-+		tables = self._get_tables(dburi, cursor)
-+		if 'subscription' in tables:
-+		    # Version > 2
-+		    cursor.execute("SELECT * FROM subscription_attribute")
-+		    columns = [col[0] for col in cursor.cursor.description]
-+		    if 'authenticated' in columns:
-+			self.log.debug("TracAnnouncer needs to register schema "
-+				       "version")
-+			return 5
-+		    if 'realm' in columns:
-+			self.log.debug("TracAnnouncer needs to change a table")
-+			return 4
-+		    self.log.debug("TracAnnouncer needs to change tables")
-+		    return 3
-+		if 'subscriptions' in tables:
-+		    cursor.execute("SELECT * FROM subscriptions")
-+		    columns = [col[0] for col in cursor.cursor.description]
-+		    if 'format' not in columns:
-+			self.log.debug("TracAnnouncer needs to add new tables")
-+			return 2
-+		    self.log.debug("TracAnnouncer needs to add/change tables")
-+		    return 1
-+		# This is a new installation.
-+		return 0
-+	    # The expected outcome for any up-to-date installation.
-+	    return row and int(row[0]) or 0
- 
-     @staticmethod
-     def _get_tables(dburi, cursor):
++                self.log.debug("TracAnnouncer needs to add new tables")
++                return 2
+                 self.log.debug("TracAnnouncer needs to add/change tables")
+                 return 1
+             # This is a new installation.
 --- a/announcer/opt/tests/subscribers.py
 +++ b/announcer/opt/tests/subscribers.py
 @@ -31,8 +31,8 @@
@@ -177,23 +148,22 @@
 -    cursor.execute("""
 -        INSERT INTO subscription
 -               (time,changetime,class,sid,authenticated,
--                distributor,format,priority,adverb)
++    with env.db_transaction as db:
++        # Convert priority values to integer.
++        cursor.execute("""
++            INSERT INTO subscription
++            (time,changetime,class,sid,authenticated,
+                 distributor,format,priority,adverb)
 -        SELECT o.time,o.changetime,o.class,o.sid,o.authenticated,
 -               o.distributor,o.format,%s,o.adverb
 -          FROM subscription_old AS o
 -        """ % db.cast('o.priority', 'int'))
 -    cursor.execute("DROP TABLE subscription_old")
-+    with env.db_transaction as db:
-+	# Convert priority values to integer.
-+	cursor.execute("""
-+	    INSERT INTO subscription
-+		   (time,changetime,class,sid,authenticated,
-+		    distributor,format,priority,adverb)
-+	    SELECT o.time,o.changetime,o.class,o.sid,o.authenticated,
-+		   o.distributor,o.format,%s,o.adverb
-+	      FROM subscription_old AS o
-+	    """ % db.cast('o.priority', 'int'))
-+	cursor.execute("DROP TABLE subscription_old")
++            SELECT o.time,o.changetime,o.class,o.sid,o.authenticated,
++            o.distributor,o.format,%s,o.adverb
++            FROM subscription_old AS o
++            """ % db.cast('o.priority', 'int'))
++        cursor.execute("DROP TABLE subscription_old")
  
 -    # Copy table on column name change.
 -    cursor.execute("""
@@ -203,19 +173,19 @@
 -          FROM subscription_attribute_old AS o
 -    """)
 -    cursor.execute("DROP TABLE subscription_attribute_old")
-+	# Copy table on column name change.
-+	cursor.execute("""
-+	    INSERT INTO subscription_attribute
-+		   (sid,class,realm,target)
-+	    SELECT o.sid,o.class,o.name,o.value
-+	      FROM subscription_attribute_old AS o
-+	""")
-+	cursor.execute("DROP TABLE subscription_attribute_old")
++        # Copy table on column name change.
++        cursor.execute("""
++            INSERT INTO subscription_attribute
++            (sid,class,realm,target)
++            SELECT o.sid,o.class,o.name,o.value
++            FROM subscription_attribute_old AS o
++        """)
++        cursor.execute("DROP TABLE subscription_attribute_old")
  
 -    # DEVEL: Migrate old subscription db table data.
 -    cursor.execute("DROP TABLE IF EXISTS subscriptions")
-+	# DEVEL: Migrate old subscription db table data.
-+	cursor.execute("DROP TABLE IF EXISTS subscriptions")
++        # DEVEL: Migrate old subscription db table data.
++        cursor.execute("DROP TABLE IF EXISTS subscriptions")
 --- a/announcer/resolvers.py
 +++ b/announcer/resolvers.py
 @@ -35,19 +35,19 @@
@@ -225,7 +195,10 @@
 -        db = self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
--            SELECT value
++        with self.env.db_query as db:
++            cursor = db.cursor()
++            cursor.execute("""
+             SELECT value
 -              FROM session_attribute
 -             WHERE sid=%s
 -               AND authenticated=%s
@@ -233,21 +206,16 @@
 -        """, (name, int(authenticated), 'email'))
 -        result = cursor.fetchone()
 -        if result:
--            return result[0]
++            FROM session_attribute
++            WHERE sid=%s
++            AND authenticated=%s
++            AND name=%s
++            """, (name, int(authenticated), 'email'))
++            result = cursor.fetchone()
++            if result:
+             return result[0]
 -        return None
-+	with self.env.db_query as db:
-+	    cursor = db.cursor()
-+	    cursor.execute("""
-+		SELECT value
-+		  FROM session_attribute
-+		 WHERE sid=%s
-+		   AND authenticated=%s
-+		   AND name=%s
-+	    """, (name, int(authenticated), 'email'))
-+	    result = cursor.fetchone()
-+	    if result:
-+		return result[0]
-+	    return None
++            return None
  
  
  class SpecifiedEmailResolver(Component):
@@ -258,7 +226,10 @@
 -        db = self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
--            SELECT value
++        with env.db_query as db:
++            cursor = db.cursor()
++            cursor.execute("""
+             SELECT value
 -              FROM session_attribute
 -             WHERE sid=%s
 -               AND authenticated=1
@@ -266,74 +237,25 @@
 -        """, (name, 'announcer_specified_email'))
 -        result = cursor.fetchone()
 -        if result:
--            return result[0]
++            FROM session_attribute
++            WHERE sid=%s
++            AND authenticated=1
++            AND name=%s
++            """, (name, 'announcer_specified_email'))
++            result = cursor.fetchone()
++            if result:
+             return result[0]
 -        return None
-+	with env.db_query as db:
-+	    cursor = db.cursor()
-+	    cursor.execute("""
-+		SELECT value
-+		  FROM session_attribute
-+		 WHERE sid=%s
-+		   AND authenticated=1
-+		   AND name=%s
-+	    """, (name, 'announcer_specified_email'))
-+	    result = cursor.fetchone()
-+	    if result:
-+		return result[0]
-+	    return None
++            return None
  
      # IAnnouncementDistributor methods
  
 --- a/announcer/util/settings.py
 +++ b/announcer/util/settings.py
-@@ -48,8 +48,8 @@
+@@ -48,21 +48,21 @@
  
      def get_user_setting(self, sid):
          """Returns tuple of (value, authenticated)."""
--        db = self.env.get_db_cnx()
--        cursor = db.cursor()
-+with env.db_query as db:
-+            cursor = db.cursor()
-         cursor.execute("""
-             SELECT value, authenticated
-               FROM session_attribute
-@@ -77,19 +77,19 @@
-         Tuples are suitable for yielding from IAnnouncementSubscriber's
-         subscriptions method.
-         """
--        db = self.env.get_db_cnx()
--        cursor = db.cursor()
--        cursor.execute("""
--            SELECT sid, authenticated, value
--              FROM session_attribute
--             WHERE name=%s
--        """, (self._attr_name(),))
--        for result in cursor.fetchall():
--            dists, val = decode(result[2])
--            for dist in dists:
--                if match(dist, val):
--                    authenticated = istrue(result[1])
--                    yield (dist, result[0], authenticated, None)
-+	with env.db_query as db:
-+	    cursor = db.cursor()
-+	    cursor.execute("""
-+		SELECT sid, authenticated, value
-+		  FROM session_attribute
-+		 WHERE name=%s
-+	    """, (self._attr_name(),))
-+	    for result in cursor.fetchall():
-+		dists, val = decode(result[2])
-+		for dist in dists:
-+		    if match(dist, val):
-+			authenticated = istrue(result[1])
-+			yield (dist, result[0], authenticated, None)
- 
-     def _attr_name(self):
-         return 'sub_%s' % self.name
-@@ -128,27 +128,27 @@
-         Value is always True or None.  This will work with Genshi template
-         checkbox logic.
-         """
 -        db = self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
@@ -344,38 +266,96 @@
 -        """, (sid, self._attr_name()))
 -        row = cursor.fetchone()
 -        if row:
--            dists, v = decode(row[0])
--            value = istrue(v)
+-            pair = decode(row[0])
 -            authenticated = istrue(row[1])
 -        else:
--            dists = self.default['dists']
--            value = istrue(self.default['value'])
+-            pair = (self.default['dists'], self.default['value'])
 -            authenticated = False
--
++        with env.db_query as db:
++            cursor = db.cursor()
++            cursor.execute("""
++                SELECT value, authenticated
++                FROM session_attribute
++                WHERE sid=%s
++                AND name=%s
++            """, (sid, self._attr_name()))
++            row = cursor.fetchone()
++            if row:
++                pair = decode(row[0])
++                authenticated = istrue(row[1])
++            else:
++                pair = (self.default['dists'], self.default['value'])
++                authenticated = False
+ 
+         # We use None here so that Genshi templates check their checkboxes
+         # properly and without confusion.
+@@ -77,19 +77,19 @@
+         Tuples are suitable for yielding from IAnnouncementSubscriber's
+         subscriptions method.
+         """
+-        db = self.env.get_db_cnx()
+-        cursor = db.cursor()
+-        cursor.execute("""
++        with env.db_query as db:
++            cursor = db.cursor()
++            cursor.execute("""
+             SELECT sid, authenticated, value
+-              FROM session_attribute
+-             WHERE name=%s
+-        """, (self._attr_name(),))
+-        for result in cursor.fetchall():
++            FROM session_attribute
++            WHERE name=%s
++            """, (self._attr_name(),))
++            for result in cursor.fetchall():
+             dists, val = decode(result[2])
+             for dist in dists:
+                 if match(dist, val):
+-                    authenticated = istrue(result[1])
+-                    yield (dist, result[0], authenticated, None)
++                authenticated = istrue(result[1])
++                yield (dist, result[0], authenticated, None)
+ 
+     def _attr_name(self):
+         return 'sub_%s' % self.name
+@@ -128,27 +128,27 @@
+         Value is always True or None.  This will work with Genshi template
+         checkbox logic.
+         """
+-        db = self.env.get_db_cnx()
+-        cursor = db.cursor()
+-        cursor.execute("""
++        with env.db_query as db:
++            cursor = db.cursor()
++            cursor.execute("""
+             SELECT value, authenticated
+-              FROM session_attribute
+-             WHERE sid=%s
+-               AND name=%s
+-        """, (sid, self._attr_name()))
+-        row = cursor.fetchone()
+-        if row:
++            FROM session_attribute
++            WHERE sid=%s
++            AND name=%s
++            """, (sid, self._attr_name()))
++            row = cursor.fetchone()
++            if row:
+             dists, v = decode(row[0])
+             value = istrue(v)
+             authenticated = istrue(row[1])
+-        else:
++            else:
+             dists = self.default['dists']
+             value = istrue(self.default['value'])
+             authenticated = False
+ 
 -        # We use None here so that Genshi templates check their checkboxes
 -        # properly and without confusion.
 -        return dists, value and True or None, authenticated
-+	with env.db_query as db:
-+	    cursor = db.cursor()
-+	    cursor.execute("""
-+		SELECT value, authenticated
-+		  FROM session_attribute
-+		 WHERE sid=%s
-+		   AND name=%s
-+	    """, (sid, self._attr_name()))
-+	    row = cursor.fetchone()
-+	    if row:
-+		dists, v = decode(row[0])
-+		value = istrue(v)
-+		authenticated = istrue(row[1])
-+	    else:
-+		dists = self.default['dists']
-+		value = istrue(self.default['value'])
-+		authenticated = False
-+
-+	    # We use None here so that Genshi templates check their checkboxes
-+	    # properly and without confusion.
-+	    return dists, value and True or None, authenticated
++            # We use None here so that Genshi templates check their checkboxes
++            # properly and without confusion.
++            return dists, value and True or None, authenticated
  
      def get_subscriptions(self):
          """Generates tuples of (distributor, sid, authenticated, email).
@@ -386,29 +366,25 @@
 -        db = self.env.get_db_cnx()
 -        cursor = db.cursor()
 -        cursor.execute("""
--            SELECT sid, authenticated, value
++        with env.db_query as db:
++            cursor = db.cursor()
++            cursor.execute("""
+             SELECT sid, authenticated, value
 -              FROM session_attribute
 -             WHERE name=%s
 -        """, (self._attr_name(),))
 -        for result in cursor.fetchall():
--            dists, val = decode(result[2])
--            for dist in dists:
--                if istrue(val):
++            FROM session_attribute
++            WHERE name=%s
++            """, (self._attr_name(),))
++            for result in cursor.fetchall():
+             dists, val = decode(result[2])
+             for dist in dists:
+                 if istrue(val):
 -                    authenticated = istrue(result[1])
 -                    yield (dist, result[0], authenticated, None)
-+	with env.db_query as db:
-+	    cursor = db.cursor()
-+	    cursor.execute("""
-+		SELECT sid, authenticated, value
-+		  FROM session_attribute
-+		 WHERE name=%s
-+	    """, (self._attr_name(),))
-+	    for result in cursor.fetchall():
-+		dists, val = decode(result[2])
-+		for dist in dists:
-+		    if istrue(val):
-+			authenticated = istrue(result[1])
-+			yield (dist, result[0], authenticated, None)
++                authenticated = istrue(result[1])
++                yield (dist, result[0], authenticated, None)
  
      def _attr_name(self):
          return 'sub_%s' % self.name
