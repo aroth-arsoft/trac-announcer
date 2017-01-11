@@ -10,7 +10,7 @@
  
      def environment_needs_upgrade(self, db):
          schema_ver = self.get_schema_version(db)
-@@ -427,15 +428,15 @@
+@@ -427,17 +428,17 @@
  
      def get_schema_version(self, db=None):
          """Return the current schema version for this plugin."""
@@ -32,36 +32,11 @@
 +            row = cursor.fetchone()
 +            if not (row and int(row[0]) > 5):
              # Care for pre-announcer-1.0 installations.
-             dburi = self.config.get('trac', 'database')
+-            dburi = self.config.get('trac', 'database')
++                dburi = self.config.get('trac', 'database')
              tables = self._get_tables(dburi, cursor)
-@@ -444,20 +445,20 @@
-                 cursor.execute("SELECT * FROM subscription_attribute")
-                 columns = [col[0] for col in cursor.cursor.description]
-                 if 'authenticated' in columns:
--                    self.log.debug("TracAnnouncer needs to register schema "
--                                   "version")
--                    return 5
-+                self.log.debug("TracAnnouncer needs to register schema "
-+                        "version")
-+                return 5
-                 if 'realm' in columns:
--                    self.log.debug("TracAnnouncer needs to change a table")
--                    return 4
-+                self.log.debug("TracAnnouncer needs to change a table")
-+                return 4
-                 self.log.debug("TracAnnouncer needs to change tables")
-                 return 3
-             if 'subscriptions' in tables:
-                 cursor.execute("SELECT * FROM subscriptions")
-                 columns = [col[0] for col in cursor.cursor.description]
-                 if 'format' not in columns:
--                    self.log.debug("TracAnnouncer needs to add new tables")
--                    return 2
-+                self.log.debug("TracAnnouncer needs to add new tables")
-+                return 2
-                 self.log.debug("TracAnnouncer needs to add/change tables")
-                 return 1
-             # This is a new installation.
+             if 'subscription' in tables:
+                 # Version > 2
 --- a/announcer/opt/tests/subscribers.py
 +++ b/announcer/opt/tests/subscribers.py
 @@ -31,8 +31,8 @@
@@ -70,8 +45,8 @@
          self.db_mgr = DatabaseManager(self.env)
 -        self.db = self.env.get_db_cnx()
 -        AnnouncementSystem(self.env).upgrade_environment(self.db)
-+	with env.db_transaction as self.db:
-+	    AnnouncementSystem(self.env).upgrade_environment(self.db)
++        with self.env.db_transaction as self.db:
++            AnnouncementSystem(self.env).upgrade_environment(self.db)
  
      def tearDown(self):
          self.env.db_transaction("DROP table 'subscription'")
@@ -206,6 +181,8 @@
 -        """, (name, int(authenticated), 'email'))
 -        result = cursor.fetchone()
 -        if result:
+-            return result[0]
+-        return None
 +            FROM session_attribute
 +            WHERE sid=%s
 +            AND authenticated=%s
@@ -213,8 +190,7 @@
 +            """, (name, int(authenticated), 'email'))
 +            result = cursor.fetchone()
 +            if result:
-             return result[0]
--        return None
++                return result[0]
 +            return None
  
  
@@ -237,6 +213,8 @@
 -        """, (name, 'announcer_specified_email'))
 -        result = cursor.fetchone()
 -        if result:
+-            return result[0]
+-        return None
 +            FROM session_attribute
 +            WHERE sid=%s
 +            AND authenticated=1
@@ -244,8 +222,7 @@
 +            """, (name, 'announcer_specified_email'))
 +            result = cursor.fetchone()
 +            if result:
-             return result[0]
--        return None
++                return result[0]
 +            return None
  
      # IAnnouncementDistributor methods
@@ -304,17 +281,20 @@
 -             WHERE name=%s
 -        """, (self._attr_name(),))
 -        for result in cursor.fetchall():
+-            dists, val = decode(result[2])
+-            for dist in dists:
+-                if match(dist, val):
+-                    authenticated = istrue(result[1])
+-                    yield (dist, result[0], authenticated, None)
 +            FROM session_attribute
 +            WHERE name=%s
 +            """, (self._attr_name(),))
 +            for result in cursor.fetchall():
-             dists, val = decode(result[2])
-             for dist in dists:
-                 if match(dist, val):
--                    authenticated = istrue(result[1])
--                    yield (dist, result[0], authenticated, None)
-+                authenticated = istrue(result[1])
-+                yield (dist, result[0], authenticated, None)
++                dists, val = decode(result[2])
++                for dist in dists:
++                    if match(dist, val):
++                        authenticated = istrue(result[1])
++                        yield (dist, result[0], authenticated, None)
  
      def _attr_name(self):
          return 'sub_%s' % self.name
@@ -335,24 +315,31 @@
 -        """, (sid, self._attr_name()))
 -        row = cursor.fetchone()
 -        if row:
+-            dists, v = decode(row[0])
+-            value = istrue(v)
+-            authenticated = istrue(row[1])
+-        else:
+-            dists = self.default['dists']
+-            value = istrue(self.default['value'])
+-            authenticated = False
+-
+-        # We use None here so that Genshi templates check their checkboxes
+-        # properly and without confusion.
+-        return dists, value and True or None, authenticated
 +            FROM session_attribute
 +            WHERE sid=%s
 +            AND name=%s
 +            """, (sid, self._attr_name()))
 +            row = cursor.fetchone()
 +            if row:
-             dists, v = decode(row[0])
-             value = istrue(v)
-             authenticated = istrue(row[1])
--        else:
++                dists, v = decode(row[0])
++                value = istrue(v)
++                authenticated = istrue(row[1])
 +            else:
-             dists = self.default['dists']
-             value = istrue(self.default['value'])
-             authenticated = False
- 
--        # We use None here so that Genshi templates check their checkboxes
--        # properly and without confusion.
--        return dists, value and True or None, authenticated
++                dists = self.default['dists']
++                value = istrue(self.default['value'])
++                authenticated = False
++
 +            # We use None here so that Genshi templates check their checkboxes
 +            # properly and without confusion.
 +            return dists, value and True or None, authenticated
@@ -374,17 +361,20 @@
 -             WHERE name=%s
 -        """, (self._attr_name(),))
 -        for result in cursor.fetchall():
+-            dists, val = decode(result[2])
+-            for dist in dists:
+-                if istrue(val):
+-                    authenticated = istrue(result[1])
+-                    yield (dist, result[0], authenticated, None)
 +            FROM session_attribute
 +            WHERE name=%s
 +            """, (self._attr_name(),))
 +            for result in cursor.fetchall():
-             dists, val = decode(result[2])
-             for dist in dists:
-                 if istrue(val):
--                    authenticated = istrue(result[1])
--                    yield (dist, result[0], authenticated, None)
-+                authenticated = istrue(result[1])
-+                yield (dist, result[0], authenticated, None)
++                dists, val = decode(result[2])
++                for dist in dists:
++                    if istrue(val):
++                        authenticated = istrue(result[1])
++                        yield (dist, result[0], authenticated, None)
  
      def _attr_name(self):
          return 'sub_%s' % self.name
