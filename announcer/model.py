@@ -14,9 +14,7 @@
 # checking for unauthenticated users should be done against the 'anonymous'
 # user.
 
-import datetime
-
-from trac.util.datefmt import to_utimestamp, utc
+from trac.util.datefmt import datetime_now, to_utimestamp, utc
 
 __all__ = ['Subscription', 'SubscriptionAttribute']
 
@@ -44,13 +42,12 @@ class Subscription(object):
     def add(cls, env, subscription, db=None):
         """ID and priority get overwritten."""
 
-        @env.with_transaction(db)
-        def do_insert(db):
+        with env.db_transaction as db:
             cursor = db.cursor()
             priority = len(cls.find_by_sid_and_distributor(
                 env, subscription['sid'], subscription['authenticated'],
                 subscription['distributor'], db)) + 1
-            now = to_utimestamp(datetime.datetime.now(utc))
+            now = to_utimestamp(datetime_now(utc))
             cursor.execute("""
                 INSERT INTO subscription
                        (time,changetime,sid,authenticated,
@@ -63,8 +60,8 @@ class Subscription(object):
 
     @classmethod
     def delete(cls, env, rule_id, db=None):
-        @env.with_transaction(db)
-        def do_delete(db):
+
+        with env.db_transaction as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT sid,authenticated,distributor
@@ -85,8 +82,8 @@ class Subscription(object):
 
     @classmethod
     def move(cls, env, rule_id, priority, db=None):
-        @env.with_transaction(db)
-        def do_delete(db):
+
+        with env.db_transaction as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT sid,authenticated,distributor
@@ -116,8 +113,8 @@ class Subscription(object):
     @classmethod
     def update_format_by_distributor_and_sid(cls, env, distributor, sid,
                                              authenticated, format, db=None):
-        @env.with_transaction(db)
-        def do_update(db):
+
+        with env.db_transaction as db:
             cursor = db.cursor()
             cursor.execute("""
                 UPDATE subscription
@@ -132,8 +129,7 @@ class Subscription(object):
                                     db=None):
         subs = []
 
-        @env.with_transaction(db)
-        def do_select(db):
+        with env.db_query as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT id,sid,authenticated,distributor,
@@ -166,8 +162,7 @@ class Subscription(object):
 
         subs = []
 
-        @env.with_transaction(db)
-        def do_select(db):
+        with env.db_query as db:
             cursor = db.cursor()
             for sid, authenticated in uids:
                 cursor.execute("""
@@ -196,8 +191,7 @@ class Subscription(object):
     def find_by_class(cls, env, klass, db=None):
         subs = []
 
-        @env.with_transaction(db)
-        def do_select(db):
+        with env.db_query as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT id,sid,authenticated,distributor,
@@ -232,10 +226,10 @@ class Subscription(object):
         )
 
     def update_priority(self, db=None):
-        @self.env.with_transaction(db)
-        def do_update(db):
+
+        with self.env.db_transaction as db:
             cursor = db.cursor()
-            now = to_utimestamp(datetime.datetime.now(utc))
+            now = to_utimestamp(datetime_now(utc))
             cursor.execute("""
                 UPDATE subscription
                    SET changetime=%s,
@@ -266,8 +260,7 @@ class SubscriptionAttribute(object):
     def add(cls, env, sid, authenticated, klass, realm, attributes, db=None):
         """id and priority overwritten."""
 
-        @env.with_transaction(db)
-        def do_insert(db):
+        with env.db_transaction as db:
             cursor = db.cursor()
             for a in attributes:
                 cursor.execute("""
@@ -278,8 +271,8 @@ class SubscriptionAttribute(object):
 
     @classmethod
     def delete(cls, env, attribute_id, db=None):
-        @env.with_transaction(db)
-        def do_delete(db):
+
+        with env.db_transaction as db:
             cursor = db.cursor()
             cursor.execute("""
                 DELETE FROM subscription_attribute
@@ -288,8 +281,8 @@ class SubscriptionAttribute(object):
 
     @classmethod
     def delete_by_sid_and_class(cls, env, sid, authenticated, klass, db=None):
-        @env.with_transaction(db)
-        def do_delete(db):
+
+        with env.db_transaction as db:
             cursor = db.cursor()
             cursor.execute("""
                 DELETE FROM subscription_attribute
@@ -301,8 +294,8 @@ class SubscriptionAttribute(object):
     @classmethod
     def delete_by_sid_class_and_target(cls, env, sid, authenticated, klass,
                                        target, db=None):
-        @env.with_transaction(db)
-        def do_delete(db):
+
+        with env.db_transaction as db:
             cursor = db.cursor()
             cursor.execute("""
                 DELETE FROM subscription_attribute
@@ -315,8 +308,8 @@ class SubscriptionAttribute(object):
     @classmethod
     def delete_by_class_realm_and_target(cls, env, klass, realm, target,
                                          db=None):
-        @env.with_transaction(db)
-        def do_delete(db):
+
+        with env.db_transaction as db:
             cursor = db.cursor()
             cursor.execute("""
                 DELETE FROM subscription_attribute
@@ -329,8 +322,7 @@ class SubscriptionAttribute(object):
     def find_by_sid_and_class(cls, env, sid, authenticated, klass, db=None):
         attrs = []
 
-        @env.with_transaction(db)
-        def do_select(db):
+        with env.db_query as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT id,sid,authenticated,class,realm,target
@@ -357,8 +349,7 @@ class SubscriptionAttribute(object):
                                      target, db=None):
         attrs = []
 
-        @env.with_transaction(db)
-        def do_select(db):
+        with env.db_query as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT id,sid,authenticated,class,realm,target
@@ -386,8 +377,7 @@ class SubscriptionAttribute(object):
                                            klass, realm, target, db=None):
         attrs = []
 
-        @env.with_transaction(db)
-        def do_select(db):
+        with env.db_query as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT id,sid,authenticated,class,realm,target
@@ -416,8 +406,7 @@ class SubscriptionAttribute(object):
                                        db=None):
         attrs = []
 
-        @env.with_transaction(db)
-        def do_select(db):
+        with env.db_query as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT id,sid,authenticated,class,realm,target
@@ -442,8 +431,7 @@ class SubscriptionAttribute(object):
     def find_by_class_and_realm(cls, env, klass, realm, db=None):
         attrs = []
 
-        @env.with_transaction(db)
-        def do_select(db):
+        with env.db_query as db:
             cursor = db.cursor()
             cursor.execute("""
                 SELECT id,sid,authenticated,class,realm,target

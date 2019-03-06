@@ -8,7 +8,7 @@
 
 import pickle
 
-from announcer.api import istrue
+from trac.util import as_bool
 
 
 def encode(*args):
@@ -48,25 +48,25 @@ class SubscriptionSetting(object):
 
     def get_user_setting(self, sid):
         """Returns tuple of (value, authenticated)."""
-        db = self.env.get_db_cnx()
-        cursor = db.cursor()
-        cursor.execute("""
-            SELECT value, authenticated
-              FROM session_attribute
-             WHERE sid=%s
-               AND name=%s
-        """, (sid, self._attr_name()))
-        row = cursor.fetchone()
-        if row:
-            pair = decode(row[0])
-            authenticated = istrue(row[1])
-        else:
-            pair = (self.default['dists'], self.default['value'])
-            authenticated = False
+        with self.env.db_query as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                SELECT value, authenticated
+                  FROM session_attribute
+                 WHERE sid=%s
+                   AND name=%s
+            """, (sid, self._attr_name()))
+            row = cursor.fetchone()
+            if row:
+                pair = decode(row[0])
+                authenticated = as_bool(row[1])
+            else:
+                pair = (self.default['dists'], self.default['value'])
+                authenticated = False
 
-        # We use None here so that Genshi templates check their checkboxes
-        # properly and without confusion.
-        return pair + (authenticated,)
+            # We use None here so that Genshi templates check their checkboxes
+            # properly and without confusion.
+            return pair + (authenticated,)
 
     def get_subscriptions(self, match):
         """Generates tuples of (distributor, sid, authenticated, email).
@@ -77,19 +77,19 @@ class SubscriptionSetting(object):
         Tuples are suitable for yielding from IAnnouncementSubscriber's
         subscriptions method.
         """
-        db = self.env.get_db_cnx()
-        cursor = db.cursor()
-        cursor.execute("""
-            SELECT sid, authenticated, value
-              FROM session_attribute
-             WHERE name=%s
-        """, (self._attr_name(),))
-        for result in cursor.fetchall():
-            dists, val = decode(result[2])
-            for dist in dists:
-                if match(dist, val):
-                    authenticated = istrue(result[1])
-                    yield (dist, result[0], authenticated, None)
+        with self.env.db_query as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                SELECT sid, authenticated, value
+                  FROM session_attribute
+                 WHERE name=%s
+            """, (self._attr_name(),))
+            for result in cursor.fetchall():
+                dists, val = decode(result[2])
+                for dist in dists:
+                    if match(dist, val):
+                        authenticated = as_bool(result[1])
+                        yield (dist, result[0], authenticated, None)
 
     def _attr_name(self):
         return 'sub_%s' % self.name
@@ -115,10 +115,8 @@ class BoolSubscriptionSetting(object):
     def set_user_setting(self, session, value=None, dists=('email',),
                          save=True):
         """Sets session attribute to 1 or 0."""
-        if istrue(value):
-            session[self._attr_name()] = encode(dists, '1')
-        else:
-            session[self._attr_name()] = encode(dists, '0')
+        session[self._attr_name()] = \
+            encode(dists, '1' if as_bool(value) else '0')
         if save:
             session.save()
 
@@ -128,27 +126,27 @@ class BoolSubscriptionSetting(object):
         Value is always True or None.  This will work with Genshi template
         checkbox logic.
         """
-        db = self.env.get_db_cnx()
-        cursor = db.cursor()
-        cursor.execute("""
-            SELECT value, authenticated
-              FROM session_attribute
-             WHERE sid=%s
-               AND name=%s
-        """, (sid, self._attr_name()))
-        row = cursor.fetchone()
-        if row:
-            dists, v = decode(row[0])
-            value = istrue(v)
-            authenticated = istrue(row[1])
-        else:
-            dists = self.default['dists']
-            value = istrue(self.default['value'])
-            authenticated = False
+        with self.env.db_query as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                SELECT value, authenticated
+                  FROM session_attribute
+                 WHERE sid=%s
+                   AND name=%s
+            """, (sid, self._attr_name()))
+            row = cursor.fetchone()
+            if row:
+                dists, v = decode(row[0])
+                value = as_bool(v)
+                authenticated = as_bool(row[1])
+            else:
+                dists = self.default['dists']
+                value = as_bool(self.default['value'])
+                authenticated = False
 
-        # We use None here so that Genshi templates check their checkboxes
-        # properly and without confusion.
-        return dists, value and True or None, authenticated
+            # We use None here so that Genshi templates check their checkboxes
+            # properly and without confusion.
+            return dists, value and True or None, authenticated
 
     def get_subscriptions(self):
         """Generates tuples of (distributor, sid, authenticated, email).
@@ -156,19 +154,19 @@ class BoolSubscriptionSetting(object):
         Tuples are suitable for yielding from IAnnouncementSubscriber's
         subscriptions method.
         """
-        db = self.env.get_db_cnx()
-        cursor = db.cursor()
-        cursor.execute("""
-            SELECT sid, authenticated, value
-              FROM session_attribute
-             WHERE name=%s
-        """, (self._attr_name(),))
-        for result in cursor.fetchall():
-            dists, val = decode(result[2])
-            for dist in dists:
-                if istrue(val):
-                    authenticated = istrue(result[1])
-                    yield (dist, result[0], authenticated, None)
+        with self.env.db_query as db:
+            cursor = db.cursor()
+            cursor.execute("""
+                SELECT sid, authenticated, value
+                  FROM session_attribute
+                 WHERE name=%s
+            """, (self._attr_name(),))
+            for result in cursor.fetchall():
+                dists, val = decode(result[2])
+                for dist in dists:
+                    if as_bool(val):
+                        authenticated = as_bool(result[1])
+                        yield (dist, result[0], authenticated, None)
 
     def _attr_name(self):
         return 'sub_%s' % self.name

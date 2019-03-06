@@ -23,7 +23,7 @@ from trac.wiki.api import IWikiChangeListener
 
 from announcer.api import _, IAnnouncementDefaultSubscriber, \
                           IAnnouncementPreferenceProvider, \
-                          IAnnouncementSubscriber, istrue
+                          IAnnouncementSubscriber
 from announcer.model import Subscription, SubscriptionAttribute
 from announcer.util import get_target_id
 
@@ -110,8 +110,7 @@ class GeneralWikiSubscriber(Component):
         sess = req.session
 
         if req.method == 'POST':
-            @self.env.with_transaction()
-            def do_update(db):
+            with self.env.db_transaction as db:
                 SubscriptionAttribute.\
                     delete_by_sid_and_class(self.env, sess.sid,
                                             sess.authenticated, klass, db)
@@ -192,8 +191,7 @@ class JoinableGroupSubscriber(Component):
         klass = self.__class__.__name__
 
         if req.method == "POST":
-            @self.env.with_transaction()
-            def do_update(db):
+            with self.env.db_transaction as db:
                 SubscriptionAttribute.\
                     delete_by_sid_and_class(self.env, req.session.sid,
                                             req.session.authenticated,
@@ -202,7 +200,7 @@ class JoinableGroupSubscriber(Component):
                 def _map(value):
                     g = re.match('^joinable_group_(.*)', value)
                     if g:
-                        if istrue(req.args.get(value)):
+                        if req.args.as_bool(value):
                             return g.groups()[0]
 
                 groups = set(filter(None, map(_map, req.args.keys())))
@@ -338,8 +336,7 @@ class TicketComponentSubscriber(Component):
     def render_announcement_preference_box(self, req, panel):
         klass = self.__class__.__name__
         if req.method == "POST":
-            @self.env.with_transaction()
-            def do_update(db):
+            with self.env.db_transaction as db:
                 SubscriptionAttribute.\
                     delete_by_sid_and_class(self.env, req.session.sid,
                                             req.session.authenticated,
@@ -348,7 +345,7 @@ class TicketComponentSubscriber(Component):
                 def _map(value):
                     g = re.match('^component_(.*)', value)
                     if g:
-                        if istrue(req.args.get(value)):
+                        if req.args.as_bool(value):
                             return g.groups()[0]
 
                 components = set(filter(None, map(_map, req.args.keys())))
@@ -482,8 +479,7 @@ class UserChangeSubscriber(Component):
         klass = self.__class__.__name__
 
         if req.method == 'POST':
-            @self.env.with_transaction()
-            def do_update(db):
+            with self.env.db_transaction as db:
                 sess = req.session
                 SubscriptionAttribute\
                     .delete_by_sid_and_class(self.env, sess.sid,
