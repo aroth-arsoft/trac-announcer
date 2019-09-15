@@ -1,5 +1,11 @@
-/.pybuild/
-/TracAnnouncer.egg-info/
+*.egg-info
+*.patch
 *.pyc
 *.mo
-/.pc/
+.stgit-*
+build/
+dist/
+patches-*/
+.settings
+.project
+.pydevproject
