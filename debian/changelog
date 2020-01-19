@@ -1,3 +1,9 @@
+trac-announcer (1.2.0+svn17497-2) eoan; urgency=medium
+
+  * fix preferences
+
+ -- Andreas Roth <aroth@arsoft-online.com>  Sun, 19 Jan 2020 10:03:19 +0100
+
 trac-announcer (1.2.0+svn17497-1) disco; urgency=medium
 
   * Automatic update 1.2.0 from https://trac-

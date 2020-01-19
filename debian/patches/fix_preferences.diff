@@ -1,0 +1,20 @@
+--- a/announcer/pref.py
++++ b/announcer/pref.py
+@@ -93,7 +93,7 @@
+             req.redirect(req.href.prefs('announcer'))
+ 
+         add_stylesheet(req, 'announcer/css/announcer_prefs.css')
+-        return 'prefs_announcer.html', {"boxes": streams}, None
++        return 'prefs_announcer.html', {"boxes": streams}
+ 
+ 
+ class SubscriptionManagementPanel(AnnouncerTemplateProvider):
+@@ -182,7 +182,7 @@
+                 })
+ 
+         add_stylesheet(req, 'announcer/css/announcer_prefs.css')
+-        return 'prefs_announcer_manage_subscriptions.html', dict(data=data), None
++        return 'prefs_announcer_manage_subscriptions.html', dict(data=data)
+ 
+     # ITemplateStreamFilter method
+ 
